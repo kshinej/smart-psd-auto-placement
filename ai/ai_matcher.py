@@ -102,7 +102,7 @@ class OllamaVisionMatcher:
                     )
                     
                     import re
-                    category = "product"
+                    category = "wear"  # AI 응답 불명확/실패 시 기본 'wear' (착용샷)으로 판별
                     confidence = 1.0
                     reason = ""
 
@@ -118,13 +118,15 @@ class OllamaVisionMatcher:
                         cat_val = str(parsed.get("category", parsed.get("answer", ""))).lower()
                         if cat_val in ["wear", "product"]:
                             category = cat_val
-                        elif "wear" in cat_val:
-                            category = "wear"
                         elif "product" in cat_val:
                             category = "product"
+                        elif "wear" in cat_val:
+                            category = "wear"
                         else:
                             all_vals = " ".join(str(v).lower() for v in parsed.values())
-                            if "wear" in all_vals:
+                            if "product" in all_vals:
+                                category = "product"
+                            else:
                                 category = "wear"
                         try:
                             confidence = float(parsed.get("confidence", 1.0))
@@ -133,13 +135,13 @@ class OllamaVisionMatcher:
                         reason = str(parsed.get("reason", ""))
                     else:
                         raw_lower = raw_response.lower()
-                        if "wear" in raw_lower or "fitting" in raw_lower or "model" in raw_lower:
-                            category = "wear"
-                        else:
+                        if "product" in raw_lower:
                             category = "product"
+                        else:
+                            category = "wear"
                         
                     is_wearing_str = "착용샷 (wear)" if category == "wear" else "미착용 단품 (product)"
-                    logger.info(f"✓ AI 판별 성공 [{orig_path.name}]: {is_wearing_str} (신뢰도: {confidence})")
+                    logger.info(f"✓ AI 판별 완료 [{orig_path.name}]: {is_wearing_str} (신뢰도: {confidence})")
                     return {
                         "category": category,
                         "confidence": confidence,
@@ -148,9 +150,14 @@ class OllamaVisionMatcher:
                     }
 
         except Exception as e:
-            logger.warning(f"Ollama Vision AI 착용 여부 분석 실패 ({orig_path.name}): {e}")
+            logger.warning(f"Ollama Vision AI 착용 여부 분석 실패 ({orig_path.name}): {e} ➔ 착용샷(wear)으로 자동 판별")
 
-        return None
+        return {
+            "category": "wear",
+            "confidence": 0.0,
+            "reason": "AI process failed",
+            "file_path": orig_path
+        }
 
     def classify_images_batch(self, image_paths: List[str | Path]) -> Dict[Path, str]:
         """

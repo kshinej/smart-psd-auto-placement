@@ -175,7 +175,7 @@ class ImageMatcher:
             logger.info(f"[Phase 2] Vision AI 판별 시작: thumb/ 썸네일 {len(thumb_map)}장 착용 여부 분석 중...")
             for orig_f, thumb_p in thumb_map.items():
                 res = ai_matcher.classify_image(orig_f, thumbnail_path=thumb_p)
-                category = res.get("category", "product") if (res and "category" in res) else "product"
+                category = res.get("category", "wear") if (res and "category" in res) else "wear"
                 ai_classifications[orig_f] = category
         else:
             for orig_f in thumb_map:
@@ -259,7 +259,7 @@ class ImageMatcher:
         - 착용 사진(wear) ➔ wear01, wear02... 순서대로 교체
         - 미착용 사진(product) ➔ product01, product02... 순서대로 교체
         """
-        valid_files = [Path(f).resolve() for f in image_files if Path(f).exists()]
+        valid_files = [ensure_winner_copy(Path(f).resolve()) for f in image_files if Path(f).exists()]
 
         wear_slots, product_slots, other_slots = self._categorize_binary_slots(flat_layers)
 
@@ -267,19 +267,26 @@ class ImageMatcher:
         used_files_norm = set()
         used_slots_norm = set()
 
-        ai_map = {Path(k).resolve(): v for k, v in (ai_classifications or {}).items()}
+        ai_map = {}
+        for k, v in (ai_classifications or {}).items():
+            resolved_k = Path(k).resolve()
+            ai_map[resolved_k] = v
+            ai_map[ensure_winner_copy(resolved_k)] = v
 
-        # 0. 전용 메인 사진(main_image_path) 지정 시 product01 최우선 직통 할당
+        # 0. 전용 메인 사진(main_image_path) 지정 시 winner/ 폴더로 복사 후 product01 최우선 직통 할당
         if main_image_path:
-            main_p = Path(main_image_path).resolve()
-            if main_p.exists() and product_slots:
-                target_p1_slot = product_slots[0]
-                matched_pairs.append((main_p, target_p1_slot))
-                used_files_norm.add(str(main_p).lower())
-                used_slots_norm.add(target_p1_slot["full_name"].lower())
-                logger.info(
-                    f"[전용 메인 사진 지정] '{main_p.name}' ➔ {target_p1_slot['full_name']} (product01 순서 직통 교체)"
-                )
+            raw_main_p = Path(main_image_path).resolve()
+            if raw_main_p.exists():
+                main_p = ensure_winner_copy(raw_main_p)
+                if product_slots:
+                    target_p1_slot = product_slots[0]
+                    matched_pairs.append((main_p, target_p1_slot))
+                    used_files_norm.add(str(raw_main_p).lower())
+                    used_files_norm.add(str(main_p).lower())
+                    used_slots_norm.add(target_p1_slot["full_name"].lower())
+                    logger.info(
+                        f"[전용 메인 사진 지정] 'winner/{main_p.name}' ➔ {target_p1_slot['full_name']} (product01 순서 직통 교체)"
+                    )
 
         # 1. 착용한 사진(wear) ➔ wear01~ 슬롯 순차 교체
         wear_files = [f for f in valid_files if str(f).lower() not in used_files_norm and ai_map.get(f) == "wear"]

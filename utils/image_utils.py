@@ -83,8 +83,10 @@ def ensure_thumbnail(original_path: str | Path, max_dim: int = 768) -> Path:
 
 
 def get_winner_path(original_path: str | Path) -> Path:
-    """orig.parent / 'winner' / orig.name 경로 생성"""
+    """orig.parent / 'winner' / orig.name 경로 생성 (이미 winner/ 내에 있으면 해당 경로 유지)"""
     orig = Path(original_path).resolve()
+    if orig.parent.name.lower() == "winner":
+        return orig
     winner_dir = orig.parent / "winner"
     winner_dir.mkdir(parents=True, exist_ok=True)
     return winner_dir / orig.name
@@ -95,6 +97,8 @@ def ensure_winner_copy(original_path: str | Path) -> Path:
     1차 선별된 최선본 이미지를 'winner/' 하위 폴더로 복사 저장합니다.
     """
     orig_path = Path(original_path).resolve()
+    if orig_path.parent.name.lower() == "winner":
+        return orig_path
     winner_path = get_winner_path(orig_path)
 
     try:

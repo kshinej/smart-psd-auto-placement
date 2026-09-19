@@ -13,7 +13,6 @@ from photoshop.connection import PhotoshopConnection, PhotoshopConnectionError
 from photoshop.document import PhotoshopDocument, DocumentError
 from photoshop.text import TextReplacer, TextReplacerError
 from photoshop.smart_object import SmartObjectReplacer, SmartObjectReplacerError
-from photoshop.image import ImageReplacer
 from utils.filename import generate_output_psd_path
 from utils.image_utils import is_thumbnail_file
 
@@ -254,7 +253,6 @@ def main():
         try:
             text_replacer = TextReplacer(doc)
             so_replacer = SmartObjectReplacer(app, doc)
-            img_processor = ImageReplacer(app, doc)
 
             base_name = args.text if args.text else (args.code if args.code else "generated_product")
 
@@ -276,7 +274,6 @@ def main():
                 out_psd_path = generate_output_psd_path(base_name, output_dir=target_output_dir)
 
             target_output_dir.mkdir(parents=True, exist_ok=True)
-            temp_output_dir = target_output_dir / "temp"
 
             # 텍스트 변경 (개별 안전 예외 격리)
             for item in text_targets:
@@ -300,19 +297,8 @@ def main():
                         logger.warning(f"[안내] Photoshop 레이어 미발견 ({full_path}) ➔ 스킵 후 진행")
                         continue
 
-                    if category == "product":
-                        processed_img = img_processor.process_image(
-                            img_path, (slot.get("width", 500), slot.get("height", 500)),
-                            mode=args.image_mode, temp_dir=temp_output_dir
-                        )
-                        so_replacer.replace_content(target_layer, processed_img)
-                    elif l_type == "smart_object":
-                        so_replacer.replace_content(target_layer, img_path)
-                    else:
-                        processed_img = img_processor.process_image(
-                            img_path, (slot.get("width", 500), slot.get("height", 500)), mode=args.image_mode, temp_dir=temp_output_dir
-                        )
-                        so_replacer.replace_content(target_layer, processed_img)
+                    # 원본 이미지 수정 없이 그대로 Photoshop 레이어 교체에 사용
+                    so_replacer.replace_content(target_layer, img_path)
                 except Exception as e_img:
                     logger.warning(f"[안내] 이미지 레이어 ({full_path}) 교체 중 예외 발생: {e_img} ➔ 스킵하고 계속 진행")
 

@@ -1,0 +1,14 @@
+{
+    "template_name": "기본 상세페이지 템플릿",
+    "text": {
+        "product_name": "product name",
+        "product_code": "product code"
+    },
+    "images": {
+        "main": "메인상품",
+        "detail_01": "이미지01",
+        "detail_02": "이미지02",
+        "detail_03": "이미지03"
+    },
+    "image_mode": "crop"
+}

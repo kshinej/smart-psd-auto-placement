@@ -1,0 +1,8 @@
+__pycache__/
+build/
+dist/
+output/
+thumb/
+winner/
+.rules
+layer_analysis.json
